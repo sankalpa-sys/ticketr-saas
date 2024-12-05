@@ -196,3 +196,103 @@ export const joinWaitingList = mutation({
     };
   },
 });
+
+export const cancelEvent = mutation({
+  args: { eventId: v.id("events") },
+  handler: async (ctx, { eventId }) => {
+    const event = await ctx.db.get(eventId);
+    if (!event) throw new Error("Event not found");
+
+    // Get all valid tickets for this event
+    const tickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .filter((q) =>
+        q.or(q.eq(q.field("status"), "valid"), q.eq(q.field("status"), "used")),
+      )
+      .collect();
+
+    if (tickets.length > 0) {
+      throw new Error(
+        "Cannot cancel event with active tickets. Please refund all tickets first.",
+      );
+    }
+
+    // Mark event as cancelled
+    await ctx.db.patch(eventId, {
+      is_cancelled: true,
+    });
+
+    // Delete any waiting list entries
+    const waitingListEntries = await ctx.db
+      .query("waitingList")
+      .withIndex("by_event_status", (q) => q.eq("eventId", eventId))
+      .collect();
+
+    for (const entry of waitingListEntries) {
+      await ctx.db.delete(entry._id);
+    }
+
+    return { success: true };
+  },
+});
+export const updateEvent = mutation({
+  args: {
+    eventId: v.id("events"),
+    name: v.string(),
+    description: v.string(),
+    location: v.string(),
+    eventDate: v.number(),
+    price: v.number(),
+    totalTickets: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { eventId, ...updates } = args;
+
+    // Get current event to check tickets sold
+    const event = await ctx.db.get(eventId);
+    if (!event) throw new Error("Event not found");
+
+    const soldTickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .filter((q) =>
+        q.or(q.eq(q.field("status"), "valid"), q.eq(q.field("status"), "used")),
+      )
+      .collect();
+
+    // Ensure new total tickets is not less than sold tickets
+    if (updates.totalTickets < soldTickets.length) {
+      throw new Error(
+        `Cannot reduce total tickets below ${soldTickets.length} (number of tickets already sold)`,
+      );
+    }
+
+    await ctx.db.patch(eventId, updates);
+    return eventId;
+  },
+});
+
+export const create = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    location: v.string(),
+    eventDate: v.number(), // Store as timestamp
+    price: v.number(),
+    totalTickets: v.number(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const eventId = await ctx.db.insert("events", {
+      name: args.name,
+      description: args.description,
+      location: args.location,
+      eventDate: args.eventDate,
+      price: args.price,
+      totalTickets: args.totalTickets,
+      userId: args.userId,
+    });
+    return eventId;
+  },
+});
