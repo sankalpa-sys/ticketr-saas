@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import {ClerkProvider} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import Header from "@/components/Header";
 import { ConvexClientProvider } from "../components/ConvexClientProvider";
 import SyncUserWithConvex from "@/components/SyncUserWithConvex";
 import EventList from "@/components/EventList";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,17 +30,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-      <ConvexClientProvider>
-          <ClerkProvider>
-              <html lang="en">
-              <body>
-              <Header/>
-              <SyncUserWithConvex/>
-              <EventList/>
-              {children}
-              </body>
-              </html>
-          </ClerkProvider>
-      </ConvexClientProvider>
+    <ConvexClientProvider>
+      <ClerkProvider>
+        <html lang="en">
+          <body>
+            <Header />
+            <SyncUserWithConvex />
+            {children}
+            <Toaster />
+          </body>
+        </html>
+      </ClerkProvider>
+    </ConvexClientProvider>
   );
 }
