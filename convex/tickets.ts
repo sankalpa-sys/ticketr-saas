@@ -44,3 +44,18 @@ export const getValidTicketsForEvent = query({
       .collect();
   },
 });
+
+export const getTicketWithDetails = query({
+  args: { ticketId: v.id("tickets") },
+  handler: async (ctx, { ticketId }) => {
+    const ticket = await ctx.db.get(ticketId);
+    if (!ticket) return null;
+
+    const event = await ctx.db.get(ticket.eventId);
+
+    return {
+      ...ticket,
+      event,
+    };
+  },
+});
