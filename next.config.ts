@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         hostname: "festive-armadillo-309.convex.cloud",
         protocol: "https",
       },
+      {
+        hostname: "beloved-jaguar-308.convex.cloud",
+        protocol: "https",
+      },
     ],
   },
 };
